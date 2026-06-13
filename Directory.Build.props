@@ -1,8 +1,8 @@
 <Project>
   <PropertyGroup>
     <BaseIntermediateOutputPath>$(MSBuildProjectDirectory)\obj\</BaseIntermediateOutputPath>
-    <Version>1.0.3</Version>
-    <PackageId>schematicaplus</PackageId>
+    <Version>1.0.4</Version>
+    <PackageId>schematicaplus122</PackageId>
     <Product>Schematica Plus</Product>
     <Description>A building assistant mod that allows you to save, load, and visualize block structures.</Description>
     <Authors>rekimchuk13</Authors>
