@@ -19,7 +19,7 @@
 
   <!-- Dependencies -->
   <ItemGroup>
-    <Dependencies Include="game" Version="1.21.0" />
+    <Dependencies Include="game" Version="1.22.0" />
   </ItemGroup>
 
   <!-- Project settings -->
@@ -175,4 +175,3 @@
     <ZipDirectory SourceDirectory="$(OutputPath)" DestinationFile="$(ReleasePathDev)" />
   </Target>
 </Project>
-

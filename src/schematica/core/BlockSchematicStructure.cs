@@ -590,7 +590,7 @@ namespace Schematica.Core
                     continue;
                 }
 
-                Block newBlock = worldForResolve.GetBlock(blockCode);
+                Block? newBlock = worldForResolve.GetBlock(blockCode);
                 if (newBlock == null)
                 {
                     continue;
@@ -640,7 +640,7 @@ namespace Schematica.Core
                 if (angle != 0)
                 {
                     var newCode = newBlock.GetRotatedBlockCode(angle);
-                    Block rotBlock = worldForResolve.GetBlock(newCode);
+                    Block? rotBlock = worldForResolve.GetBlock(newCode);
                     if (rotBlock != null)
                     {
                         newBlock = rotBlock;
@@ -1036,6 +1036,5 @@ namespace Schematica.Core
         public int Z { get; set; }
     }
 }
-
 
 
