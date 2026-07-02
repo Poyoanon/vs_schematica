@@ -7,6 +7,7 @@ using Vintagestory.API.Common;
 using Vintagestory.API.Config;
 using Vintagestory.API.MathTools;
 using Schematica.Core;
+using Schematica.Utils;
 
 namespace Schematica.GUI
 {
@@ -34,7 +35,7 @@ namespace Schematica.GUI
             // Set defaults if not set
             if (firstPoint.X == 0 && firstPoint.Y == 0 && firstPoint.Z == 0)
             {
-                var playerPos = capi.World.Player.Entity.Pos.AsBlockPos;
+                var playerPos = SchematicaHelpers.GetPlayerBlockPos(capi);
                 firstPoint = new BlockPos(playerPos.X - 5, playerPos.Y - 1, playerPos.Z - 5);
                 secondPoint = new BlockPos(playerPos.X + 5, playerPos.Y + 5, playerPos.Z + 5);
             }
@@ -198,7 +199,7 @@ namespace Schematica.GUI
         private bool OnFirstPlayerPos()
         {
             updatingFromCode = true;
-            firstPoint = capi.World.Player.Entity.Pos.AsBlockPos.Copy();
+            firstPoint = SchematicaHelpers.GetPlayerBlockPos(capi).Copy();
             modSystem.GuiState.FirstPoint = firstPoint.Copy();
             UpdateTextInputs();
             updatingFromCode = false;
@@ -208,7 +209,7 @@ namespace Schematica.GUI
         private bool OnSecondPlayerPos()
         {
             updatingFromCode = true;
-            secondPoint = capi.World.Player.Entity.Pos.AsBlockPos.Copy();
+            secondPoint = SchematicaHelpers.GetPlayerBlockPos(capi).Copy();
             modSystem.GuiState.SecondPoint = secondPoint.Copy();
             UpdateTextInputs();
             updatingFromCode = false;
@@ -292,6 +293,5 @@ namespace Schematica.GUI
         }
     }
 }
-
 
 

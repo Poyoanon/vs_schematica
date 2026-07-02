@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using Schematica.Utils;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
@@ -299,7 +300,7 @@ namespace Schematica.GUI
 
         private bool OnSetHereClick()
         {
-            renderPos = capi.World.Player.Entity.Pos.AsBlockPos.Copy();
+            renderPos = SchematicaHelpers.GetPlayerBlockPos(capi).Copy();
             modSystem.GuiState.RenderPos = renderPos.Copy();
             UpdatePositionInputs();
             UpdateRenderPosition();
@@ -510,6 +511,5 @@ namespace Schematica.GUI
         }
     }
 }
-
 
 

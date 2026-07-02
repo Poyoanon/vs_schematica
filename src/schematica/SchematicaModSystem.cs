@@ -1,9 +1,12 @@
 using System;
+using System.IO;
+using Schematica.Api;
 using Schematica.Commands;
 using Schematica.Core;
 using Schematica.GUI;
 using Schematica.Profiling;
 using Schematica.Rendering;
+using Schematica.Utils;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.MathTools;
@@ -13,9 +16,12 @@ namespace Schematica
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1001:Types that own disposable fields should be disposable", Justification = "Disposal is handled by the Vintage Story ModSystem lifecycle via override Dispose().")]
     public sealed class SchematicaModSystem : ModSystem
     {
+        public const string EasyPlaceApiCacheKey = "rustmatica:easyplace-api";
+
         private ICoreClientAPI? capi;
         private SchematicCommands? commands;
         private GuiDialog? currentDialog;
+        private SchematicaImGuiWindow? imGuiWindow;
         private int updateCounter;
         private bool disposed;
         private long updateTickListenerId = -1;
@@ -26,6 +32,7 @@ namespace Schematica
         public SchematicaGuiState GuiState { get; private set; } = new SchematicaGuiState();
         public BlockSchematicStructure? CurrentSchematic { get; private set; }
         public SchematicRenderer Renderer { get; private set; } = null!;
+        public IRustmaticaEasyPlaceApi EasyPlaceApi { get; private set; } = null!;
         public SchematicaProfilingManager? ProfilingManager => profilingManager;
 
         public override void StartClientSide(ICoreClientAPI api)
@@ -39,6 +46,8 @@ namespace Schematica
 
             // Initialize components
             Renderer = new SchematicRenderer(api, this);
+            EasyPlaceApi = new RustmaticaEasyPlaceApi(api, this);
+            api.ObjectCache[EasyPlaceApiCacheKey] = EasyPlaceApi;
             profilingManager = new SchematicaProfilingManager(api, this, Renderer);
             Renderer.ProfilingSink = profilingManager;
             commands = new SchematicCommands(api, this);
@@ -49,6 +58,7 @@ namespace Schematica
             {
                 Renderer.ClearRuntimeCaches();
                 Renderer.ReloadRuntimeConfig();
+                imGuiWindow?.InvalidateCounter();
             };
             api.Event.ReloadTextures += reloadTexturesHandler;
 
@@ -77,7 +87,7 @@ namespace Schematica
                     if (updateCounter >= 20) // Every 20 ticks (1 second)
                     {
                         updateCounter = 0;
-                        var playerPos = api.World.Player.Entity.Pos.AsBlockPos;
+                        var playerPos = SchematicaHelpers.GetPlayerBlockPos(api);
                         Renderer.UpdateChunksNearPlayer(playerPos, 10);
                     }
                 }
@@ -102,14 +112,30 @@ namespace Schematica
                 return false;
             }
 
-            if (!HasOpenDialog)
-            {
-                return ShowDialog(new SchematicaMainDialog(capi, this));
-            }
-
             currentDialog?.TryClose();
             currentDialog = null;
-            return true;
+            return ToggleMainDialog();
+        }
+
+        public bool ToggleMainDialog()
+        {
+            if (capi == null)
+            {
+                return false;
+            }
+
+            try
+            {
+                imGuiWindow ??= new SchematicaImGuiWindow(capi, this);
+                imGuiWindow.Toggle();
+                return true;
+            }
+            catch (Exception ex) when (ex is InvalidOperationException or TypeLoadException or FileNotFoundException or MissingMethodException)
+            {
+                capi.Logger.Error($"[Schematica Plus] Failed to open ImGui window: {ex}");
+                capi.ShowChatMessage("Failed to open Schematica Plus ImGui window. Ensure the VSImGui mod is installed and enabled.");
+                return false;
+            }
         }
 
         public void LoadSchematic(BlockSchematicStructure schematic)
@@ -118,12 +144,14 @@ namespace Schematica
 
             CurrentSchematic = schematic;
             Renderer.SetSchematic(schematic);
+            imGuiWindow?.InvalidateCounter();
         }
 
         public void ClearSchematic()
         {
             CurrentSchematic = null;
             Renderer.Clear();
+            imGuiWindow?.InvalidateCounter();
         }
 
         public void ShowSaveDialog()
@@ -141,7 +169,7 @@ namespace Schematica
         public bool ShowMainDialog()
         {
             if (capi == null) throw new InvalidOperationException("Client API is not initialized");
-            return ShowDialog(new SchematicaMainDialog(capi, this));
+            return ToggleMainDialog();
         }
 
         public override void Dispose()
@@ -154,6 +182,8 @@ namespace Schematica
 
             if (capi != null)
             {
+                capi.ObjectCache.Remove(EasyPlaceApiCacheKey);
+
                 if (updateTickListenerId >= 0)
                 {
                     capi.Event.UnregisterGameTickListener(updateTickListenerId);
@@ -174,6 +204,8 @@ namespace Schematica
             Renderer.ProfilingSink = null;
             Renderer?.ClearAllProjections();
             Renderer?.Dispose();
+            imGuiWindow?.Dispose();
+            imGuiWindow = null;
             currentDialog?.Dispose();
             currentDialog = null;
             disposed = true;
@@ -203,6 +235,3 @@ namespace Schematica
         public bool ShowAllLayers { get; set; }
     }
 }
-
-
-

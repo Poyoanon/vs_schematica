@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using Schematica.Rendering;
+using Schematica.Utils;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.MathTools;
@@ -590,7 +591,7 @@ namespace Schematica.Profiling
 
             if (config.ChunkUpdateIntervalTicks > 0 && scenarioTick % config.ChunkUpdateIntervalTicks == 0)
             {
-                BlockPos playerPos = entity.Pos.AsBlockPos;
+                BlockPos playerPos = SchematicaHelpers.GetEntityBlockPos(entity);
                 renderer.UpdateChunksNearPlayer(playerPos, config.ChunkRadius);
             }
         }
@@ -1111,6 +1112,5 @@ namespace Schematica.Profiling
         }
     }
 }
-
 
 

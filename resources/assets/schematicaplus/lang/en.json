@@ -25,6 +25,16 @@
   "gui-size": "Size",
   "gui-total-blocks": "Total blocks",
   "gui-required-blocks": "Required blocks:",
+  "gui-block-counter-title": "Block counter",
+  "gui-unique-block-types": "Unique block types",
+  "gui-current-layer-label": "Layer",
+  "gui-rotate-left": "Rotate left",
+  "gui-rotate-right": "Rotate right",
+  "gui-mirror-x": "Mirror X",
+  "gui-mirror-y": "Mirror Y",
+  "gui-mirror-z": "Mirror Z",
+  "gui-material": "Material",
+  "gui-count": "Count",
   "gui-and-more": "... and {0} more",
   "gui-no-block-info": "No block info available",
   "gui-unknown": "Unknown",
@@ -42,4 +52,3 @@
   "msg-please-filename": "Please enter a file name.",
   "msg-layer": "Layer: {0}/{1}"
 }
-

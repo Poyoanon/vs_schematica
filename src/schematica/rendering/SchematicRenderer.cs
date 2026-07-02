@@ -29,6 +29,7 @@ namespace Schematica.Rendering
         private readonly Dictionary<Vec3i, List<SerializableBlock>> blocksByChunkIndex = new Dictionary<Vec3i, List<SerializableBlock>>();
         private readonly Dictionary<string, AssetLocation> assetLocationCache = new Dictionary<string, AssetLocation>(StringComparer.Ordinal);
         private readonly Dictionary<string, Block?> blockByCodeCache = new Dictionary<string, Block?>(StringComparer.Ordinal);
+        private readonly Dictionary<string, long> easyPlaceHoldUntilByPosition = new Dictionary<string, long>(StringComparer.Ordinal);
         private readonly Queue<Vec3i> chunkUpdateQueue = new Queue<Vec3i>();
         private readonly HashSet<Vec3i> queuedChunkPositions = new HashSet<Vec3i>();
         private bool chunkIndexValid;
@@ -304,7 +305,7 @@ namespace Schematica.Rendering
                         bool isEmpty = currentBlock?.Id == 0;
                         bool isCorrect = BlockValidator.IsBlockCorrect(capi, worldPos, blockData);
 
-                        if (!isCorrect)
+                        if (!isCorrect || IsEasyPlaceHeld(worldPos))
                         {
                             blocksInChunk.Add(new GhostBlock
                             {
@@ -467,6 +468,7 @@ namespace Schematica.Rendering
             currentOrigin = null;
             currentBlocks = null;
             projectionSafeMode = false;
+            easyPlaceHoldUntilByPosition.Clear();
             chunkUpdateQueue.Clear();
             queuedChunkPositions.Clear();
             InvalidateChunkIndex();
@@ -610,7 +612,7 @@ namespace Schematica.Rendering
                     bool isCorrect = BlockValidator.IsBlockCorrect(capi, worldPos, blockData);
                     bool isEmpty = currentBlock?.Id == 0;
 
-                    if (!isCorrect)
+                    if (!isCorrect || IsEasyPlaceHeld(worldPos))
                     {
                         blocksInChunk.Add(new GhostBlock
                         {
@@ -635,6 +637,42 @@ namespace Schematica.Rendering
                 chunk.BuildMesh(blocksInChunk);
                 ghostChunks[chunkPos] = chunk;
             }
+        }
+
+        public bool TryGetEasyPlaceTarget(BlockPos worldPos, out SerializableBlock? blockData, out bool isCorrect)
+        {
+            ArgumentNullException.ThrowIfNull(worldPos);
+
+            blockData = null;
+            isCorrect = false;
+
+            if (currentBlocks == null || currentOrigin == null)
+            {
+                return false;
+            }
+
+            var origin = currentOrigin;
+            var chunkPos = new Vec3i(
+                FloorDiv(worldPos.X, chunkSize),
+                FloorDiv(worldPos.Y, chunkSize),
+                FloorDiv(worldPos.Z, chunkSize)
+            );
+
+            foreach (var candidate in GetBlocksForChunk(chunkPos, currentBlocks))
+            {
+                if (origin.X + candidate.X != worldPos.X
+                    || origin.Y + candidate.Y != worldPos.Y
+                    || origin.Z + candidate.Z != worldPos.Z)
+                {
+                    continue;
+                }
+
+                blockData = candidate;
+                isCorrect = BlockValidator.IsBlockCorrect(capi, worldPos, candidate);
+                return !isCorrect;
+            }
+
+            return false;
         }
 
         public void Dispose()
@@ -702,6 +740,46 @@ namespace Schematica.Rendering
             }
 
             return false;
+        }
+
+        public void HoldEasyPlaceTarget(BlockPos worldPos, int holdMilliseconds)
+        {
+            ArgumentNullException.ThrowIfNull(worldPos);
+
+            int clampedMilliseconds = Math.Clamp(holdMilliseconds, 250, 10000);
+            easyPlaceHoldUntilByPosition[FormatBlockPosKey(worldPos)] = capi.ElapsedMilliseconds + clampedMilliseconds;
+
+            var chunkPos = new Vec3i(
+                FloorDiv(worldPos.X, chunkSize),
+                FloorDiv(worldPos.Y, chunkSize),
+                FloorDiv(worldPos.Z, chunkSize)
+            );
+            EnqueueChunkForUpdate(chunkPos);
+        }
+
+        private bool IsEasyPlaceHeld(BlockPos worldPos)
+        {
+            string key = FormatBlockPosKey(worldPos);
+            if (!easyPlaceHoldUntilByPosition.TryGetValue(key, out long holdUntilMs))
+            {
+                return false;
+            }
+
+            if (holdUntilMs >= capi.ElapsedMilliseconds)
+            {
+                return true;
+            }
+
+            easyPlaceHoldUntilByPosition.Remove(key);
+            return false;
+        }
+
+        private static string FormatBlockPosKey(BlockPos pos)
+        {
+            return string.Create(
+                CultureInfo.InvariantCulture,
+                $"{pos.X}/{pos.Y}/{pos.Z}"
+            );
         }
 
         private int ProcessChunkUpdateQueue(int maxPerFrame)
@@ -999,6 +1077,3 @@ namespace Schematica.Rendering
         }
     }
 }
-
-
-
